@@ -40,20 +40,27 @@
 
 (in-package :spam)
 
-(defconstant +word-re+ (compile-re "%a%a[%w_%-']+")
+(defconstant +word-re+ (compile-re "%a[%a%-]+")
   "Pattern used to find words in text.")
 
-(defconstant +common-words+ (list "the" "be" "to" "of" "and" "a" "in" "that" "have" "i" "it" 
-                                  "for" "not" "on" "with" "he" "as" "you" "do" "at" "this" 
-                                  "but" "his" "by" "from" "they" "we" "say" "her" "she" "or" 
-                                  "an" "will" "my" "one" "all" "would" "there" "their" "what" 
-                                  "so" "up" "out" "if" "about" "who" "get" "which" "go" "me" 
-                                  "when" "make" "can" "like" "time" "no" "just" "him" "know" 
-                                  "take" "people" "into" "year" "your" "good" "some" "could" 
-                                  "them" "see" "other" "than" "then" "now" "look" "only" 
-                                  "come" "its" "over" "think" "also" "back" "after" "use" 
-                                  "two" "how" "our" "work" "first" "well" "way" "even" "new" 
-                                  "want" "because" "any" "these" "give" "day" "most" "us")
+(defconstant +common-words+ (list "a" "able" "about" "above" "after" "all" "also" "an"
+                                  "and" "any" "as" "ask" "at" "back" "bad" "be" "because"
+                                  "beneath" "big" "both" "but" "by" "call" "can" "case" "child"
+                                  "come" "company" "could" "day" "different" "do" "early"
+                                  "even" "eye" "fact" "feel" "few" "find" "first" "for" 
+                                  "from" "get" "give" "go" "good" "government" "great" "group" 
+                                  "hand" "have" "he" "her" "high" "him" "his" "how" "i" "if" 
+                                  "important" "in" "into" "it" "its" "just" "know" "large" 
+                                  "last" "leave" "life" "like" "little" "long" "look" "make" 
+                                  "man" "me" "most" "my" "new" "next" "no" "not" "now" "number" 
+                                  "of" "old" "on" "one" "only" "or" "other" "our" "out" "over" 
+                                  "own" "part" "people" "person" "place" "point" "problem" 
+                                  "public" "right" "same" "say" "see" "seem" "she" "small" "so" 
+                                  "some" "take" "tell" "than" "that" "the" "their" "them" "then" 
+                                  "there" "these" "they" "thing" "think" "this" "time" "to" 
+                                  "try" "two" "under" "up" "us" "use" "want" "way" "we" "week" 
+                                  "well" "what" "when" "which" "who" "will" "with" "woman" 
+                                  "work" "world" "would" "year" "you" "young" "your")
   "Very common words that should be excluded from filtering.")
 
 (defclass bayesian-filter ()
@@ -61,9 +68,35 @@
    (|ham|      :initform (make-hash-table :test 'equal) :accessor bayesian-filter-ham-words :type cl:hash-table)
    (|ignore|   :initform (copy-list +common-words+)     :accessor bayesian-filter-ignore-words)
    (|count|    :initform 0                              :accessor bayesian-filter-count)
+   (|window|   :initform 2                              :accessor bayesian-filter-window-size)
    (|liked|    :initform nil                            :accessor bayesian-filter-liked)
    (|disliked| :initform nil                            :accessor bayesian-filter-disliked))
   (:documentation "Naive Bayesian spam filter."))
+
+(defmethod bayesian-filter-scan ((filter bayesian-filter) text &optional (n (bayesian-filter-window-size filter)))
+  "Return a list of words and phrases in a filter."
+  (loop :with words := (find-re +word-re+ text :all t)
+        :with n-words := (length words)
+        :with phrase := ()
+
+        ;; loop over each word found
+        :for match :in words
+        :for word := (match-string match)
+        
+        ;; append each word to the sliding window phrase
+        :do (setf phrase (if (bayesian-filter-ignore-p filter word)
+                             nil
+                           (append phrase (list word))))
+        
+        ;; keep the phrase reasonable in size
+        :do (when (> (length phrase) n)
+              (pop phrase))
+
+        ;; make sure there was something to filter
+        :when (or (= n-words 1) (= (length phrase) n))
+
+        ;; collect each phrase, joined with spaces and downcased
+        :collect (format nil "~{~(~a~^ ~)~}" phrase)))
 
 (defmethod bayesian-filter-like ((filter bayesian-filter) source texts)
   "Mark a text string as one that you dislike."
@@ -84,17 +117,10 @@
     
       ;; mark every single word as one that you like
       (dolist (text texts)
-        (loop :for match :in (find-re +word-re+ text :all t)
-              :for word := (string-downcase (match-string match))
-            
-              ;; ignore common words
-              :unless (bayesian-filter-ignore-p filter word)
-
-              ;; remove disliked words, add liked
-              :do (progn
-                    (when (eq status :liked)
-                      (decf (gethash word (bayesian-filter-spam-words filter))))
-                    (incf (gethash word (bayesian-filter-ham-words filter) 0))))))))
+        (dolist (word (bayesian-filter-scan filter text))
+          (when (eq status :liked)
+            (decf (gethash word (bayesian-filter-spam-words filter))))
+          (incf (gethash word (bayesian-filter-ham-words filter) 0)))))))
 
 (defmethod bayesian-filter-dislike ((filter bayesian-filter) source texts)
   "Mark a text string as one that you dislike."
@@ -115,17 +141,10 @@
     
       ;; mark every single word as one that you like
       (dolist (text texts)
-        (loop :for match :in (find-re +word-re+ text :all t)
-              :for word := (string-downcase (match-string match))
-            
-              ;; ignore common words
-              :unless (bayesian-filter-ignore-p filter word)
-
-              ;; remove liked words, add disliked
-              :do (progn
-                    (when (eq status :liked)
-                      (decf (gethash word (bayesian-filter-ham-words filter))))
-                    (incf (gethash word (bayesian-filter-spam-words filter) 0))))))))
+        (dolist (word (bayesian-filter-scan filter text))
+          (when (eq status :liked)
+            (decf (gethash word (bayesian-filter-ham-words filter))))
+          (incf (gethash word (bayesian-filter-spam-words filter) 0)))))))
 
 (defmethod bayesian-filter-dislike-probability ((filter bayesian-filter) source texts)
   "Returns the probability that a source text is spam."
@@ -180,4 +199,7 @@
 
 (defmethod bayesian-filter-ignore-p ((filter bayesian-filter) word)
   "T if word is common and should be excluded from filtering."
-  (find word (bayesian-filter-ignore-words filter) :test #'string-equal))
+  (or (find word (bayesian-filter-ignore-words filter) :test #'string-equal)
+
+      ;; if the word is too short and not all upper-case (e.g. MLB)
+      (and (< (length word) 3) (some #'lower-case-p word))))
