@@ -43,24 +43,30 @@
 (defconstant +word-re+ (compile-re "%a[%a%-]+")
   "Pattern used to find words in text.")
 
-(defconstant +common-words+ (list "a" "able" "about" "above" "after" "all" "also" "an"
-                                  "and" "any" "as" "ask" "at" "back" "bad" "be" "because"
-                                  "beneath" "big" "both" "but" "by" "call" "can" "case" "child"
-                                  "come" "company" "could" "day" "different" "do" "early"
-                                  "even" "eye" "fact" "feel" "few" "find" "first" "for" 
-                                  "from" "get" "give" "go" "good" "government" "great" "group" 
-                                  "hand" "have" "he" "her" "high" "him" "his" "how" "i" "if" 
-                                  "important" "in" "into" "it" "its" "just" "know" "large" 
-                                  "last" "leave" "life" "like" "little" "long" "look" "make" 
-                                  "man" "me" "most" "my" "new" "next" "no" "not" "now" "number" 
-                                  "of" "old" "on" "one" "only" "or" "other" "our" "out" "over" 
-                                  "own" "part" "people" "person" "place" "point" "problem" 
-                                  "public" "right" "same" "say" "see" "seem" "she" "small" "so" 
-                                  "some" "take" "tell" "than" "that" "the" "their" "them" "then" 
-                                  "there" "these" "they" "thing" "think" "this" "time" "to" 
-                                  "try" "two" "under" "up" "us" "use" "want" "way" "we" "week" 
-                                  "well" "what" "when" "which" "who" "will" "with" "woman" 
-                                  "work" "world" "would" "year" "you" "young" "your")
+(defconstant +common-words+ '("a" "abaft" "abeam" "aboard" "about" "above" "across" "after" 
+                              "against" "aha" "ahem" "ahoy" "alas" "all" "along" "although" "amid" 
+                              "among" "an" "and" "another" "any" "anybody" "anyone" "anything" 
+                              "around" "as" "at" "atop" "aw" "be" "because" "before" "behind" 
+                              "below" "beneath" "beside" "besides" "between" "beyond" "both" 
+                              "but" "by" "circa" "concerning" "dang" "darn" "despite" "down" 
+                              "during" "each" "either" "enough" "even" "everybody" "everyone" 
+                              "everything" "except" "excluding" "failing" "few" "fewer" "following" 
+                              "for" "from" "given" "gosh" "her" "hers" "herself" "hey" "himself" 
+                              "his" "how" "i" "if" "in" "including" "inside" "into" "is" "isn't" 
+                              "it" "it's" "its" "itself" "less" "lest" "like" "little" "many" 
+                              "me" "mid" "midst" "mine" "minus" "more" "most" "much" "my" "myself" 
+                              "near" "neither" "next" "no" "no-one" "nobody" "none" "noone" "nor" 
+                              "not" "nothing" "notwithstanding" "of" "off" "oh" "on" "once" "one" 
+                              "onto" "opposite" "or" "other" "others" "our" "ours" "ourselves" "out" 
+                              "outside" "over" "ow" "pace" "past" "per" "plus" "pro" "provided" 
+                              "qua" "regarding" "round" "sans" "save" "several" "since" "so" "some" 
+                              "somebody" "someone" "something" "soon" "such" "than" "that" "the" 
+                              "their" "theirs" "them" "themselves" "then" "there" "these" "they" "this" 
+                              "those" "though" "through" "throughout" "till" "times" "to" "toward" 
+                              "towards" "under" "underneath" "unless" "unlike" "until" "unto" "up" 
+                              "upon" "us" "versus" "via" "we" "what" "whatever" "when" "whenever" 
+                              "where" "wherever" "which" "while" "who" "whoever" "whom" "whose" "why" 
+                              "with" "within" "without" "yes" "yet" "you" "your" "yours" "yourself")
   "Very common words that should be excluded from filtering.")
 
 (defclass bayesian-filter ()
