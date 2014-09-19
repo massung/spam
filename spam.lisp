@@ -84,16 +84,15 @@
         :for word := (match-string match)
         
         ;; append each word to the sliding window phrase
-        :do (setf phrase (if (bayesian-filter-ignore-p filter word)
-                             nil
-                           (append phrase (list word))))
+        :unless (bayesian-filter-ignore-p filter word)
+        :do (setf phrase (append phrase (list word)))
         
         ;; keep the phrase reasonable in size
         :do (when (> (length phrase) n)
               (pop phrase))
 
         ;; make sure there was something to filter
-        :when (or (= n-words 1) (= (length phrase) n))
+        :when (and phrase (or (= n-words 1) (>= (length phrase) n)))
 
         ;; collect each phrase, joined with spaces and downcased
         :collect (format nil "~{~(~a~^ ~)~}" phrase)))
@@ -159,20 +158,16 @@
           ;; make a guess
           (t (let ((p 0.0))
                (dolist (text texts (/ 1 (1+ (exp p))))
-                 (loop :for match :in (find-re +word-re+ text :all t)
-                       :for word := (match-string match)
-                       
-                       ;; ignore common words
-                       :unless (bayesian-filter-ignore-p filter word)
-                       :do (let* ((prws (/ (gethash word (bayesian-filter-spam-words filter) 0) count))
-                                  (prwh (/ (gethash word (bayesian-filter-ham-words filter) 0) count))
-                                  
-                                  ;; the probability that a message with word is disliked
-                                  (prsw (if (zerop (+ prws prwh))
-                                            0
-                                          (min (/ prws (+ prws prwh)) 0.99))))
-                             (unless (zerop prsw)
-                               (incf p (- (log (- 1.0 prsw)) (log prsw))))))))))))
+                 (dolist (word (bayesian-filter-scan filter text))
+                   (let* ((prws (/ (gethash word (bayesian-filter-spam-words filter) 0) count))
+                          (prwh (/ (gethash word (bayesian-filter-ham-words filter) 0) count))
+                          
+                          ;; the probability that a message with word is disliked
+                          (prsw (if (zerop (+ prws prwh))
+                                    0
+                                  (min (/ prws (+ prws prwh)) 0.99))))
+                     (unless (zerop prsw)
+                       (incf p (- (log (- 1.0 prsw)) (log prsw))))))))))))
 
 (defmethod bayesian-filter-like-probability ((filter bayesian-filter) source texts)
   "Returns the probability that a set of texts is liked."
